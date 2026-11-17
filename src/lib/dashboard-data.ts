@@ -15,13 +15,19 @@ export function reportDays(range: Range, now = new Date()) {
 export type CreatorRow = { key: string; name: string; netEarnings: number; newSubscribers: number | null }
 export type ChatterRow = { key: string; name: string; messagesSent: number; sales: number }
 export type LinkRow = { key: string; name: string; clicks: number; subscriptions: number }
+export type EarningsSource = { label: string; earnings: number }
+export type AudienceSnapshot = { day: string; active: number }
 
 export type DashboardData = {
   mode: "demo" | "live"
   days: string[]
   connectedCreators: number | null
   earnings: { day: string; earnings: number }[] | null
+  earningsSources: EarningsSource[] | null
+  refunds: number | null
   subscribers: { day: string; newSubscribers: number }[] | null
+  renewals: number | null
+  activeSubscriptions: AudienceSnapshot | null
   creators: CreatorRow[] | null
   chatters: ChatterRow[] | null
   links: LinkRow[] | null
@@ -52,7 +58,16 @@ export function demoDashboard(range: Range): DashboardData {
     days,
     connectedCreators: 8,
     earnings: samples,
+    earningsSources: [
+      { label: "Subscriptions", earnings: Math.round(net * 0.45) },
+      { label: "Messages", earnings: Math.round(net * 0.30) },
+      { label: "Tips", earnings: Math.round(net * 0.15) },
+      { label: "Posts", earnings: net - Math.round(net * 0.45) - Math.round(net * 0.30) - Math.round(net * 0.15) },
+    ],
+    refunds: days.length * 24,
     subscribers: samples,
+    renewals: samples.reduce((total, row) => total + Math.round(row.newSubscribers * 0.62), 0),
+    activeSubscriptions: { day: days[days.length - 1], active: 3862 },
     creators: [{ name: "Creator A", share: 0.28 }, { name: "Creator B", share: 0.21 }, { name: "Creator C", share: 0.15 }].map(({ name, share }) => ({
       key: name, name,
       netEarnings: Math.round(net * share),

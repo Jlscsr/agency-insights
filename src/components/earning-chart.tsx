@@ -30,18 +30,19 @@ export function EarningsChart({ data }: { data: DashboardData["earnings"] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Net earnings by day</CardTitle>
+        <CardTitle className="font-semibold"><h3>Net earnings by day</h3></CardTitle>
         <CardDescription>Completed transactions · USD</CardDescription>
       </CardHeader>
 
       <CardContent>
         {data === null ? <p className="text-sm text-muted-foreground">Earnings are temporarily unavailable.</p> : (
-        <ResponsiveContainer width="100%" height={256} minWidth={0}>
+        <ResponsiveContainer width="100%" height={288} minWidth={0}>
           <LineChart data={data} margin={{ right: 12 }}>
             <CartesianGrid stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="day" tickFormatter={dateLabel} axisLine={false} tickLine={false} minTickGap={24} />
+            <XAxis dataKey="day" tickFormatter={dateLabel} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} axisLine={false} tickLine={false} minTickGap={24} />
             <YAxis
               width={64}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(value: number) => dollars.format(value)}

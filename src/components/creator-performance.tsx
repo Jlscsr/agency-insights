@@ -20,7 +20,7 @@ export function CreatorPerformance({ rows }: { rows: CreatorRow[] | null }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Creator performance</CardTitle>
+        <CardTitle className="font-semibold"><h3>Creator performance</h3></CardTitle>
         <CardDescription>Ranked by completed net earnings</CardDescription>
       </CardHeader>
 
@@ -32,8 +32,8 @@ export function CreatorPerformance({ rows }: { rows: CreatorRow[] | null }) {
               <TableHead scope="col" className="text-right">
                 Net earnings
               </TableHead>
-              <TableHead scope="col" className="text-right">
-                New subscribers
+              <TableHead scope="col" className="whitespace-normal text-right">
+                New subscriptions
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -43,7 +43,7 @@ export function CreatorPerformance({ rows }: { rows: CreatorRow[] | null }) {
             </TableCell></TableRow>}
             {rows?.map(({ key, name, netEarnings, newSubscribers }) => (
               <TableRow key={key}>
-                <TableCell className="font-medium">{name}</TableCell>
+                <TableCell className="font-medium whitespace-normal [overflow-wrap:anywhere]">{name}</TableCell>
                 <TableCell className="text-right tabular-nums">
                   {usd.format(netEarnings)}
                 </TableCell>

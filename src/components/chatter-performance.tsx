@@ -20,7 +20,7 @@ export function ChatterPerformance({ rows }: { rows: ChatterRow[] | null }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Chatter performance</CardTitle>
+        <CardTitle className="font-semibold"><h3>Chatter performance</h3></CardTitle>
         <CardDescription>Up to 8 active employees · Ranked by attributed sales</CardDescription>
       </CardHeader>
 
@@ -29,7 +29,7 @@ export function ChatterPerformance({ rows }: { rows: ChatterRow[] | null }) {
           <TableHeader>
             <TableRow>
               <TableHead scope="col">Chatter</TableHead>
-              <TableHead scope="col" className="text-right">
+              <TableHead scope="col" className="whitespace-normal text-right">
                 Direct messages
               </TableHead>
               <TableHead scope="col" className="text-right">
@@ -43,7 +43,7 @@ export function ChatterPerformance({ rows }: { rows: ChatterRow[] | null }) {
             </TableCell></TableRow>}
             {rows?.slice(0, 8).map(({ key, name, messagesSent, sales }) => (
               <TableRow key={key}>
-                <TableCell className="font-medium">{name}</TableCell>
+                <TableCell className="font-medium whitespace-normal [overflow-wrap:anywhere]">{name}</TableCell>
                 <TableCell className="text-right tabular-nums">
                   {count.format(messagesSent)}
                 </TableCell>

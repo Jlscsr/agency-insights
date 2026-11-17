@@ -7,6 +7,17 @@ function displayName(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback
 }
 
+const revenueCategories: ReadonlyMap<unknown, string> = new Map([
+  ["Subscription", "Subscriptions"],
+  ["Recurring Subscription", "Subscriptions"],
+  ["RecurringSubscription", "Subscriptions"],
+  ["Messages", "Messages"],
+  ["Tips", "Tips"],
+  ["Posts", "Posts"],
+  ["Streams", "Streams"],
+  ["Referrals", "Referrals"],
+])
+
 function batches(ids: string[]) {
   return Array.from({ length: Math.ceil(ids.length / 10) }, (_, index) =>
     ids.slice(index * 10, index * 10 + 10),
@@ -43,11 +54,12 @@ async function readDashboard(days: string[]): Promise<DashboardData> {
     })),
   )
 
-  const [connectedCreators, revenue, audience, chatters, links] = await Promise.all([
+  const [connectedCreators, revenue, audience, chatters, links, refunds, activeSubscriptions] = await Promise.all([
     section("creator roster", creatorList.then((list) => list.length)),
     section("transactions", creatorList.then(async (creators) => {
       const daily = days.map((day) => ({ day, earnings: 0 }))
       const dayIndexes = new Map(days.map((day, index) => [day, index]))
+      const bySource = new Map<string, number>()
       const pages = await Promise.all(creators.map((creator) =>
         inflowwRows("/v1/transactions", { ...timestampQuery, creatorId: creator.id }),
       ))
@@ -59,14 +71,18 @@ async function readDashboard(days: string[]): Promise<DashboardData> {
           const position = dayIndexes.get(date)
           if (position === undefined) continue
           const cents = integer(row.net)
+          const label = revenueCategories.get(row.type) ?? "Other"
           net += cents
           daily[position].earnings += cents
+          bySource.set(label, (bySource.get(label) ?? 0) + cents)
         }
         return { key: creator.id, platformId: creator.platformId, name: creator.name, netEarnings: net / 100 }
       })
       return {
         daily: daily.map(({ day, earnings }) => ({ day, earnings: earnings / 100 })),
         entries: entries.sort((a, b) => b.netEarnings - a.netEarnings),
+        sources: [...bySource].map(([label, cents]) => ({ label, earnings: cents / 100 }))
+          .sort((a, b) => b.earnings - a.earnings),
       }
     })),
     section("subscriber reports", creatorList.then(async (creators) => {
@@ -75,15 +91,17 @@ async function readDashboard(days: string[]): Promise<DashboardData> {
       ))
       const daily = new Map(days.map((day) => [day, 0]))
       const perCreator = new Map<string, number>()
+      let renewals = 0
       for (const row of pages.flat()) {
         const date = identifier(row.date)
         if (!daily.has(date)) continue
         const creator = identifier(row.platformPid)
         const count = integer(row.newSubscribers)
+        renewals += integer(row.subscriberRenewals)
         daily.set(date, (daily.get(date) ?? 0) + count)
         perCreator.set(creator, (perCreator.get(creator) ?? 0) + count)
       }
-      return { daily: [...daily].map(([day, newSubscribers]) => ({ day, newSubscribers })), perCreator }
+      return { daily: [...daily].map(([day, newSubscribers]) => ({ day, newSubscribers })), perCreator, renewals }
     })),
     section("employee reports", employeeList.then(async (employees) => {
       const groups = batches(employees.map((employee) => employee.id))
@@ -129,6 +147,41 @@ async function readDashboard(days: string[]): Promise<DashboardData> {
         subscriptions: integer(row.subCount),
       }))).sort((a, b) => b.subscriptions - a.subscriptions || b.clicks - a.clicks).slice(0, 10)
     })),
+    section("refunds", creatorList.then(async (creators) => {
+      const pages = await Promise.all(creators.map((creator) =>
+        inflowwRows("/v1/refunds", { ...timestampQuery, creatorId: creator.id }),
+      ))
+      const earliest = Date.parse(timestampQuery.startTime)
+      const latest = Date.parse(timestampQuery.endTime)
+      let cents = 0
+      for (const row of pages.flat()) {
+        if (row.currency !== "USD") continue
+        const time = integer(row.refundTime)
+        if (time >= earliest && time <= latest) cents += integer(row.paymentAmount)
+      }
+      return cents / 100
+    })),
+    section("active subscription reports", creatorList.then(async (creators) => {
+      if (!creators.length) return { day: dateQuery.endTime, active: 0 }
+
+      const creatorIds = new Set(creators.map((creator) => creator.platformId))
+      const pages = await Promise.all(batches(creators.map((creator) => creator.id)).map((ids) =>
+        inflowwRows("/v1/creator-report/fans/count", { ...dateQuery, creatorIds: ids }),
+      ))
+      const snapshots = new Map(days.map((day) => [day, new Map<string, number>()]))
+      for (const row of pages.flat()) {
+        const snapshot = snapshots.get(identifier(row.date))
+        if (!snapshot) continue
+        const creator = identifier(row.platformPid)
+        if (creatorIds.has(creator)) snapshot.set(creator, integer(row.activeFans))
+      }
+      for (const [day, snapshot] of [...snapshots].reverse()) {
+        if (snapshot.size === creatorIds.size) {
+          return { day, active: [...snapshot.values()].reduce((total, value) => total + value, 0) }
+        }
+      }
+      return null
+    })),
   ])
 
   return {
@@ -136,7 +189,11 @@ async function readDashboard(days: string[]): Promise<DashboardData> {
     days,
     connectedCreators,
     earnings: revenue?.daily ?? null,
+    earningsSources: revenue?.sources ?? null,
+    refunds,
     subscribers: audience?.daily ?? null,
+    renewals: audience?.renewals ?? null,
+    activeSubscriptions,
     creators: revenue?.entries.map(({ platformId, ...row }) => ({
       ...row,
       newSubscribers: audience ? audience.perCreator.get(platformId) ?? 0 : null,
@@ -158,7 +215,7 @@ export function liveDashboard(range: Range) {
   cache.set(range, entry)
   void entry.data.then(
     (data) => {
-      const complete = [data.earnings, data.subscribers, data.chatters, data.links].every((value) => value !== null)
+      const complete = [data.earnings, data.subscribers, data.chatters, data.links, data.refunds].every((value) => value !== null)
       entry.until = Date.now() + (complete ? 60_000 : 10_000)
     },
     () => cache.delete(range),

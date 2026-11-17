@@ -1,7 +1,7 @@
 import { Suspense } from "react"
+import { ChartNoAxesCombined } from "lucide-react"
 
 import { Dashboard } from "@/components/dashboard"
-import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { liveDashboardEnabled } from "@/lib/dashboard-auth"
 import { demoDashboard, parseRange } from "@/lib/dashboard-data"
 
@@ -19,18 +19,18 @@ export default function Home({ searchParams }: HomeProps) {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
-          <span className="text-lg font-semibold tracking-tight">Agency Insights</span>
+        <div className="mx-auto flex h-16 max-w-[92rem] items-center gap-3 px-4 sm:px-8 lg:px-10">
+          <span className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
+            <ChartNoAxesCombined className="size-5" aria-hidden="true" />
+          </span>
+          <span className="text-base font-semibold tracking-tight">Agency Insights</span>
         </div>
       </header>
-      <div className="mx-auto w-full max-w-7xl flex-1 lg:flex">
-        <DashboardSidebar />
-        <main className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-8">
-          <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Loading overview…</p>}>
-            <DashboardOverview searchParams={searchParams} />
-          </Suspense>
-        </main>
-      </div>
+      <main className="mx-auto w-full max-w-[92rem] flex-1 px-4 py-8 sm:px-8 lg:px-10 lg:py-10">
+        <Suspense fallback={<p role="status" className="text-sm text-muted-foreground">Loading overview…</p>}>
+          <DashboardOverview searchParams={searchParams} />
+        </Suspense>
+      </main>
     </div>
   )
 }
